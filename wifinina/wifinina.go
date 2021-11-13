@@ -4,7 +4,7 @@
 // In order to use this driver, the ESP32 must be flashed with specific firmware from Arduino.
 // For more information: https://github.com/arduino/nina-fw
 //
-package wifinina // import "tinygo.org/x/drivers/wifinina"
+package wifinina
 
 import (
 	"encoding/binary"
