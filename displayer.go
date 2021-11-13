@@ -1,4 +1,4 @@
-package tinygo-drivers
+package drivers
 
 import "image/color"
 
