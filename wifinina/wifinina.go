@@ -403,6 +403,26 @@ func (d *Device) GetDataBuf(sock uint8, buf []byte) (int, error) {
 	return int(n), err
 }
 
+func (d *Device) GetDataBuf16(sock uint16, buf []byte) (int, error) {
+	if err := d.waitForChipSelect(); err != nil {
+		d.spiChipDeselect()
+		return 0, err
+	}
+	p := uint16(len(buf))
+	l := d.sendCmd(CmdGetDatabufTCP, 2)
+	l += d.sendParam16(sock, false)
+	l += d.sendParamBuf([]byte{uint8(p & 0x00FF), uint8((p) >> 8)}, true)
+	d.addPadding(l)
+	d.spiChipDeselect()
+	if err := d.waitForChipSelect(); err != nil {
+		d.spiChipDeselect()
+		return 0, err
+	}
+	n, err := d.waitRspBuf16(CmdGetDatabufTCP, buf)
+	d.spiChipDeselect()
+	return int(n), err
+}
+
 func (d *Device) StopClient(sock uint8) error {
 	if _debug {
 		println("[StopClient] called StopClient()\r")
