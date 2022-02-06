@@ -1,4 +1,4 @@
-module github.com/ardean/tinygo-drivers
+module tinygo.org/x/drivers
 
 go 1.15
 
