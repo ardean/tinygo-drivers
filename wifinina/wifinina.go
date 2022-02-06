@@ -4,7 +4,7 @@
 // In order to use this driver, the ESP32 must be flashed with specific firmware from Arduino.
 // For more information: https://github.com/arduino/nina-fw
 //
-package wifinina
+package wifinina // import "tinygo.org/x/drivers/wifinina"
 
 import (
 	"encoding/binary"
@@ -281,9 +281,16 @@ type Device struct {
 
 	buf   [64]byte
 	ssids [10]string
+
+	sock    uint8
+	readBuf readBuffer
+
+	proto uint8
+	ip    uint32
+	port  uint16
 }
 
-// New returns a new Wifinina driver.
+// New returns a new Wifinina device.
 func New(bus drivers.SPI, csPin, ackPin, gpio0Pin, resetPin machine.Pin) *Device {
 	return &Device{
 		SPI:   bus,
@@ -295,13 +302,13 @@ func New(bus drivers.SPI, csPin, ackPin, gpio0Pin, resetPin machine.Pin) *Device
 }
 
 func (d *Device) Configure() {
+	net.UseDriver(d)
+	pinUseDevice(d)
 
-	net.UseDriver(d.NewDriver())
-
-	d.CS.Configure(machine.PinConfig{machine.PinOutput})
-	d.ACK.Configure(machine.PinConfig{machine.PinInput})
-	d.RESET.Configure(machine.PinConfig{machine.PinOutput})
-	d.GPIO0.Configure(machine.PinConfig{machine.PinOutput})
+	d.CS.Configure(machine.PinConfig{Mode: machine.PinOutput})
+	d.ACK.Configure(machine.PinConfig{Mode: machine.PinInput})
+	d.RESET.Configure(machine.PinConfig{Mode: machine.PinOutput})
+	d.GPIO0.Configure(machine.PinConfig{Mode: machine.PinOutput})
 
 	d.GPIO0.High()
 	d.CS.High()
@@ -311,7 +318,7 @@ func (d *Device) Configure() {
 	time.Sleep(1 * time.Millisecond)
 
 	d.GPIO0.Low()
-	d.GPIO0.Configure(machine.PinConfig{machine.PinInput})
+	d.GPIO0.Configure(machine.PinConfig{Mode: machine.PinInput})
 
 }
 
@@ -378,7 +385,7 @@ func (d *Device) CheckDataSent(sock uint8) (bool, error) {
 		if sent > 0 {
 			return true, nil
 		}
-		wait(100 * time.Microsecond)
+		time.Sleep(100 * time.Microsecond)
 	}
 	return false, lastErr
 }
@@ -391,26 +398,6 @@ func (d *Device) GetDataBuf(sock uint8, buf []byte) (int, error) {
 	p := uint16(len(buf))
 	l := d.sendCmd(CmdGetDatabufTCP, 2)
 	l += d.sendParamBuf([]byte{sock}, false)
-	l += d.sendParamBuf([]byte{uint8(p & 0x00FF), uint8((p) >> 8)}, true)
-	d.addPadding(l)
-	d.spiChipDeselect()
-	if err := d.waitForChipSelect(); err != nil {
-		d.spiChipDeselect()
-		return 0, err
-	}
-	n, err := d.waitRspBuf16(CmdGetDatabufTCP, buf)
-	d.spiChipDeselect()
-	return int(n), err
-}
-
-func (d *Device) GetDataBuf16(sock uint16, buf []byte) (int, error) {
-	if err := d.waitForChipSelect(); err != nil {
-		d.spiChipDeselect()
-		return 0, err
-	}
-	p := uint16(len(buf))
-	l := d.sendCmd(CmdGetDatabufTCP, 2)
-	l += d.sendParam16(sock, false)
 	l += d.sendParamBuf([]byte{uint8(p & 0x00FF), uint8((p) >> 8)}, true)
 	d.addPadding(l)
 	d.spiChipDeselect()
@@ -473,19 +460,6 @@ func (d *Device) SendUDPData(sock uint8) (bool, error) {
 	d.spiChipDeselect()
 	n, err := d.getUint8(d.waitRspCmd1(CmdSendDataUDP))
 	return n == 1, err
-}
-
-func (d *Device) CheckDataAvailable(sock uint8) (uint16, error) {
-	if err := d.waitForChipSelect(); err != nil {
-		d.spiChipDeselect()
-		return 0, err
-	}
-	l := d.sendCmd(CmdAvailDataTCP, 1)
-	l += d.sendParam8(sock, true)
-	d.addPadding(l)
-	d.spiChipDeselect()
-	socket, err := d.getUint16(d.waitRspCmd1(CmdAvailDataTCP))
-	return socket, err
 }
 
 // ---------- /client methods (should this be a separate struct?) ------------
@@ -722,6 +696,23 @@ func (d *Device) StartScanNetworks() (uint8, error) {
 	return d.getUint8(d.req0(CmdStartScanNetworks))
 }
 
+func (d *Device) PinMode(pin uint8, mode uint8) error {
+	_, err := d.req2Uint8(CmdSetPinMode, pin, mode)
+	return err
+}
+
+func (d *Device) DigitalWrite(pin uint8, value uint8) error {
+	_, err := d.req2Uint8(CmdSetDigitalWrite, pin, value)
+	return err
+}
+
+func (d *Device) AnalogWrite(pin uint8, value uint8) error {
+	_, err := d.req2Uint8(CmdSetAnalogWrite, pin, value)
+	return err
+}
+
+// ------------- End of public device interface ----------------------------
+
 func (d *Device) getString(l uint8, err error) (string, error) {
 	if err != nil {
 		return "", err
@@ -806,6 +797,14 @@ func (d *Device) reqUint8(cmd uint8, data uint8) (l uint8, err error) {
 	return d.waitRspCmd1(cmd)
 }
 
+// req2Uint8 sends a command to the device with two uint8 parameters
+func (d *Device) req2Uint8(cmd, p1, p2 uint8) (l uint8, err error) {
+	if err := d.sendCmdPadded2(cmd, p1, p2); err != nil {
+		return 0, err
+	}
+	return d.waitRspCmd1(cmd)
+}
+
 // reqStr sends a command to the device with a single string parameter
 func (d *Device) reqStr(cmd uint8, p1 string) (uint8, error) {
 	if err := d.sendCmdStr(cmd, p1); err != nil {
@@ -863,6 +862,18 @@ func (d *Device) sendCmdPadded1(cmd uint8, data uint8) error {
 	d.sendCmd(cmd, 1)
 	d.sendParam8(data, true)
 	d.SPI.Transfer(dummyData)
+	d.SPI.Transfer(dummyData)
+	return nil
+}
+
+func (d *Device) sendCmdPadded2(cmd, data1, data2 uint8) error {
+	defer d.spiChipDeselect()
+	if err := d.waitForChipSelect(); err != nil {
+		return err
+	}
+	l := d.sendCmd(cmd, 1)
+	l += d.sendParam8(data1, false)
+	l += d.sendParam8(data2, true)
 	d.SPI.Transfer(dummyData)
 	return nil
 }
@@ -1018,8 +1029,7 @@ func (d *Device) checkStartCmd() (bool, error) {
 }
 
 func (d *Device) waitForChipSelect() (err error) {
-	err = d.waitForChipReady()
-	if err == nil {
+	if err = d.waitForChipReady(); err == nil {
 		err = d.spiChipSelect()
 	}
 	return
@@ -1029,12 +1039,14 @@ func (d *Device) waitForChipReady() error {
 	if _debug {
 		println("waitForChipReady()\r")
 	}
-	for t := newTimer(10 * time.Second); !(d.ACK.Get() == false); {
-		if t.Expired() {
-			return ErrTimeoutChipReady
+	start := time.Now()
+	for time.Since(start) < 10*time.Second {
+		if !d.ACK.Get() {
+			return nil
 		}
+		time.Sleep(1 * time.Millisecond)
 	}
-	return nil
+	return ErrTimeoutChipReady
 }
 
 func (d *Device) spiChipSelect() error {
@@ -1042,10 +1054,12 @@ func (d *Device) spiChipSelect() error {
 		println("spiChipSelect()\r")
 	}
 	d.CS.Low()
-	for t := newTimer(5 * time.Millisecond); !t.Expired(); {
+	start := time.Now()
+	for time.Since(start) < 5*time.Millisecond {
 		if d.ACK.Get() {
 			return nil
 		}
+		time.Sleep(100 * time.Microsecond)
 	}
 	return ErrTimeoutChipSelect
 }
@@ -1173,7 +1187,7 @@ func (d *Device) readAndCheckByte(check byte, read *byte) bool {
 // readParamLen16 reads 2 bytes from the SPI bus (MSB first), returning uint16
 func (d *Device) readParamLen16() (v uint16, err error) {
 	if b, err := d.SPI.Transfer(0xFF); err == nil {
-		v |= uint16(b << 8)
+		v |= uint16(b) << 8
 		if b, err = d.SPI.Transfer(0xFF); err == nil {
 			v |= uint16(b)
 		}

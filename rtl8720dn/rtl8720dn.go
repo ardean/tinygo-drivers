@@ -2,17 +2,20 @@ package rtl8720dn
 
 import "io"
 
+const maxUartRecvSize = 128
+
 type RTL8720DN struct {
-	port     io.ReadWriter
-	seq      uint64
-	received chan bool
-	debug    bool
+	port  io.ReadWriter
+	seq   uint64
+	sema  chan bool
+	debug bool
 
 	connectionType ConnectionType
 	socket         int32
 	client         uint32
 	length         int
 	root_ca        *string
+	udpInfo        [6]byte // Port: [2]byte + IP: [4]byte
 }
 
 type ConnectionType int
@@ -26,13 +29,11 @@ const (
 
 func New(r io.ReadWriter) *RTL8720DN {
 	ret := &RTL8720DN{
-		port:     r,
-		seq:      1,
-		received: make(chan bool, 1),
-		debug:    false,
+		port:  r,
+		seq:   1,
+		sema:  make(chan bool, 1),
+		debug: false,
 	}
-
-	go ret.readThread()
 
 	return ret
 }

@@ -2,7 +2,7 @@
 clean:
 	@rm -rf build
 
-FMT_PATHS = ./*.go ./examples/**/*.go
+FMT_PATHS = ./
 
 fmt-check:
 	@unformatted=$$(gofmt -l $(FMT_PATHS)); [ -z "$$unformatted" ] && exit 0; echo "Unformatted:"; for fn in $$unformatted; do echo "  $$fn"; done; exit 1
@@ -16,6 +16,8 @@ smoke-test:
 	tinygo build -size short -o ./build/test.hex -target=pybadge ./examples/amg88xx
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=itsybitsy-m0 ./examples/apa102/main.go
+	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.hex -target=nano-33-ble ./examples/apds9960/proximity/main.go
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=itsybitsy-m0 ./examples/apa102/itsybitsy-m0/main.go
 	@md5sum ./build/test.hex
@@ -63,6 +65,8 @@ smoke-test:
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=arduino-nano33 ./examples/hd44780i2c/main.go
 	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.hex -target=nano-33-ble ./examples/hts221/main.go
+	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=microbit ./examples/hub75/main.go
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=pyportal ./examples/ili9341/basic
@@ -75,7 +79,11 @@ smoke-test:
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=xiao ./examples/ili9341/scroll
 	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.hex -target=pyportal ./examples/ili9341/slideshow
+	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=circuitplay-express ./examples/lis3dh/main.go
+	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.hex -target=nano-33-ble ./examples/lps22hb/main.go
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=microbit ./examples/lsm303agr/main.go
 	@md5sum ./build/test.hex
@@ -108,6 +116,8 @@ smoke-test:
 	tinygo build -size short -o ./build/test.hex -target=pybadge ./examples/shifter/main.go
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=microbit ./examples/sht3x/main.go
+	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.hex -target=microbit ./examples/shtc3/main.go
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=microbit ./examples/ssd1306/i2c_128x32/main.go
 	@md5sum ./build/test.hex
@@ -179,8 +189,8 @@ endif
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=feather-m0 ./examples/dht/main.go
 	@md5sum ./build/test.hex
-	tinygo build -size short -o ./build/test.hex -target=arduino ./examples/keypad4x4/main.go
-	@md5sum ./build/test.hex
+	# tinygo build -size short -o ./build/test.hex -target=arduino ./examples/keypad4x4/main.go
+	# @md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=xiao ./examples/pcf8563/alarm/
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=xiao ./examples/pcf8563/clkout/
@@ -199,12 +209,29 @@ endif
 	@md5sum ./build/test.hex
 	tinygo build -size short -o ./build/test.hex -target=wioterminal ./examples/rtl8720dn/webclient/
 	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.hex -target=wioterminal ./examples/rtl8720dn/webserver/
+	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.hex -target=wioterminal ./examples/rtl8720dn/mqttsub/
+	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.hex -target=feather-m4 ./examples/i2csoft/adt7410/
+	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.elf -target=wioterminal ./examples/axp192/m5stack-core2-blinky/
+	@md5sum ./build/test.hex
+	tinygo build -size short -o ./build/test.uf2 -target=pico ./examples/xpt2046/main.go
+	@md5sum ./build/test.uf2
+	tinygo build -size short -o ./build/test.elf -target=m5stack-core2 ./examples/ft6336/basic/
+	@md5sum ./build/test.elf
+	tinygo build -size short -o ./build/test.elf -target=m5stack-core2 ./examples/ft6336/touchpaint/
+	@md5sum ./build/test.elf
+	tinygo build -size short -o ./build/test.hex -target=nucleo-wl55jc ./examples/sx126x/lora_rxtx/
+	@md5sum ./build/test.hex
 
 DRIVERS = $(wildcard */)
 NOTESTS = build examples flash semihosting pcd8544 shiftregister st7789 microphone mcp3008 gps microbitmatrix \
 		hcsr04 ssd1331 ws2812 thermistor apa102 easystepper ssd1351 ili9341 wifinina shifter hub75 \
 		hd44780 buzzer ssd1306 espat l9110x st7735 bmi160 l293x dht keypad4x4 max72xx p1am tone tm1637 \
-		pcf8563 mcp2515 servo sdcard rtl8720dn
+		pcf8563 mcp2515 servo sdcard rtl8720dn image cmd i2csoft hts221 lps22hb apds9960 axp192 xpt2046 \
+		ft6336 sx126x
 TESTS = $(filter-out $(addsuffix /%,$(NOTESTS)),$(DRIVERS))
 
 unit-test:

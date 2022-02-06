@@ -94,7 +94,7 @@ func Dial(network, address string) (Conn, error) {
 
 // SerialConn is a loosely net.Conn compatible implementation
 type SerialConn struct {
-	Adaptor DeviceDriver
+	Adaptor Adapter
 }
 
 // UDPSerialConn is a loosely net.Conn compatible intended to support
@@ -169,7 +169,7 @@ func (c *UDPSerialConn) LocalAddr() Addr {
 
 // RemoteAddr returns the remote network address.
 func (c *UDPSerialConn) RemoteAddr() Addr {
-	return c.laddr.opAddr()
+	return c.raddr.opAddr()
 }
 
 func (c *UDPSerialConn) opConn() Conn {
@@ -186,7 +186,7 @@ func (c *TCPSerialConn) LocalAddr() Addr {
 
 // RemoteAddr returns the remote network address.
 func (c *TCPSerialConn) RemoteAddr() Addr {
-	return c.laddr.opAddr()
+	return c.raddr.opAddr()
 }
 
 func (c *TCPSerialConn) opConn() Conn {
@@ -342,6 +342,18 @@ func (a *TCPAddr) opAddr() Addr {
 
 // ParseIP parses s as an IP address, returning the result.
 func ParseIP(s string) IP {
+	b := strings.Split(s, ".")
+	if len(b) == 4 {
+		ip := make([]byte, 4)
+
+		for i := range ip {
+			x, _ := strconv.ParseUint(b[i], 10, 8)
+			ip[i] = byte(x)
+		}
+
+		return IP(ip)
+	}
+
 	return IP([]byte(s))
 }
 

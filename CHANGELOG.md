@@ -1,3 +1,61 @@
+0.19.0
+---
+- **new devices**
+    - ft6336: add support for ft6336
+    - pca9685: PCA9685 driver
+    - shtc3: Sensirion SHTC3 Relative Humidity / Temperature i2c sensor
+    - sx126x: Driver for Semtech sx126x radio modules
+    - xpt2046: XPT2046 Touch driver (#350)
+- **enhancements**
+    - **hd44780i2c** 
+        - clean up for go fmt
+        - Needed fixes and update hd44780i2c.go
+    - **ili9341, ili9342**
+        - add support for m5stack
+        - add support for m5stack-core2
+    - **wifi**
+        - modify to use shared net.Adapter interface for all supported wifi devices
+    - wifinina: remove busy wait
+- **bugfixes**
+    - **hd44780** 
+        - fix 4-bit data length flag
+        - Reset data pins to output mode after reading
+    - Nano 33 BLE drivers (#351)
+- **docs**
+    - examples/wifi: add unified example for tcpclient that compiles for all supported wifi adaptors
+
+0.18.0
+---
+- **new devices**
+    - apds9960: add support for APDS-9960 Digital Proximity sensor
+    - axp192: add support for AXP192 single Cell Li-Battery and power system management IC
+    - hts221: add support for HTS221 capacitive digital sensor for relative humidity and temperature
+    - i2csoft: add support for software I2C
+    - image: add support for image/jpeg and image/png
+    - lps22hb: add support for LPS22HB MEMS nano pressure sensor
+    - lsm6dox: add support for lsm6dox accelerometer
+    - lsm9ds1: add support for lsm9ds1 accelerometer
+- **enhancements**
+    - ili9341: change to use drivers.SPI interface
+    - **ws2812**
+        - generate assembly instead of handwriting it
+        - improve timings to be compatible with the WS2811
+        - add support for 168MHz (e.g. Adafruit Feather STM32F405)
+        - add support for RISC-V
+    - wifinina: control nina pins, for example leds
+- **docs**
+    - rtl8720dn: examples for tcpclient, udpstation, mqtt, and webserver
+    - **wifinina** 
+        - nina-fw update docs
+        - examples/wifinina/http-get
+    - ili9341: refactor examples
+    - Fix broken link for SHT3x datasheet
+- **core**
+    - all: use build directives for both Go1.17 and earlier versions
+- **bugfixes**
+    - net: fix raddr of tcp conn
+    - mcp3008: fix bitshift bug
+
 0.17.1
 ---
 - To correct an error in the release process. Same as 0.17.0.
