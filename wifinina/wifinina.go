@@ -462,6 +462,19 @@ func (d *Device) SendUDPData(sock uint8) (bool, error) {
 	return n == 1, err
 }
 
+func (d *Device) CheckDataAvailable(sock uint8) (uint16, error) {
+	if err := d.waitForChipSelect(); err != nil {
+		d.spiChipDeselect()
+		return 0, err
+	}
+	l := d.sendCmd(CmdAvailDataTCP, 1)
+	l += d.sendParam8(sock, true)
+	d.addPadding(l)
+	d.spiChipDeselect()
+	socket, err := d.getUint16(d.waitRspCmd1(CmdAvailDataTCP))
+	return socket, err
+}
+
 // ---------- /client methods (should this be a separate struct?) ------------
 
 /*
