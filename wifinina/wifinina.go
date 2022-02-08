@@ -418,10 +418,10 @@ func (d *Device) StopClient(sock uint8) error {
 	return err
 }
 
-func (d *Device) StartServer(port uint16, sock uint8, mode uint8) error {
+func (d *Device) StartServer(port uint16, sock uint8, mode uint8) (uint8, error) {
 	if err := d.waitForChipSelect(); err != nil {
 		d.spiChipDeselect()
-		return err
+		return 0, err
 	}
 	l := d.sendCmd(CmdStartServerTCP, 3)
 	l += d.sendParam16(port, false)
@@ -429,8 +429,20 @@ func (d *Device) StartServer(port uint16, sock uint8, mode uint8) error {
 	l += d.sendParam8(mode, true)
 	d.addPadding(l)
 	d.spiChipDeselect()
-	_, err := d.waitRspCmd1(CmdStartClientTCP)
-	return err
+	return d.getUint8(d.waitRspCmd1(CmdStartServerTCP))
+}
+
+func (d *Device) GetTcpState(sock uint8) (uint8, error) {
+	if err := d.waitForChipSelect(); err != nil {
+		d.spiChipDeselect()
+		return 0, err
+	}
+	l := d.sendCmd(CmdGetStateTCP, 1)
+	l += d.sendParam8(sock, true)
+	d.addPadding(l)
+	d.spiChipDeselect()
+	state, err := d.getUint8(d.waitRspCmd1(CmdGetStateTCP))
+	return state, err
 }
 
 // InsertDataBuf adds data to the buffer used for sending UDP data
@@ -756,7 +768,7 @@ func (d *Device) getUint16(l uint8, err error) (uint16, error) {
 		}
 		return 0, ErrUnexpectedLength
 	}
-	return binary.BigEndian.Uint16(d.buf[0:2]), err
+	return binary.LittleEndian.Uint16(d.buf[0:2]), err
 }
 
 func (d *Device) getUint32(l uint8, err error) (uint32, error) {

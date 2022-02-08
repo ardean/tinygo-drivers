@@ -131,7 +131,7 @@ func (d *Device) ConnectUDPSocket(addr, portStr, lportStr string) (err error) {
 	}
 
 	// start listening for UDP packets on the local port
-	if err := d.StartServer(lport, d.sock, d.proto); err != nil {
+	if _, err := d.StartServer(lport, d.sock, d.proto); err != nil {
 		return err
 	}
 
